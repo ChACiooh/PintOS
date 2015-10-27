@@ -116,6 +116,7 @@ struct thread
 
 		struct file** file_descriptor;
 		int max_fd;
+		int wakeup_tick;
   };
 
 /* If false (default), use round-robin scheduler.
@@ -153,5 +154,16 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+/* Alarm clock functions. */
+void thread_sleep(int64_t ticks);	/* Make current thread which is running sleep. */
+void thread_awake(int64_t ticks);	/* Awake thread to wake up in sleep_list. */
+void update_next_tick_to_awake(int64_t ticks);	/* Save thread that has minimum tick value. */
+int64_t get_next_tick_to_awake(void);	/* Return 'next_tick_to_awake' in 'thread.c.' */
+void test_max_priority(void);	/* Compare current thread's priority and another thread that has the biggest priority, and schedule. */
+
+/* Return 1 if first priority is bigger than second's. */
+bool cmp_priority(const struct list_elem *a_, const struct list_elem *b_, void *aux UNUSED);	/* Compare the priorities of given threads. */
+
 
 #endif /* threads/thread.h */
