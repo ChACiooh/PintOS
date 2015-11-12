@@ -215,6 +215,7 @@ thread_create (const char *name, int priority,
   intr_set_level (old_level);
 
   t->parent = thread_current();  //Save parent process
+  t->priority = priority;		//Save priority
   t->is_exit = false;    //program not exit
   t->load_status = -1;  //program not load
   sema_init(&(t->s_load), 0);  //load semaphore init
@@ -229,7 +230,7 @@ thread_create (const char *name, int priority,
   thread_unblock (t);
 
   /* Yield cpu if created thread's priority is higher than current thread's. */
-  if( priority > t->parent->priority )
+  if( t->priority > t->parent->priority )
   {
 	  thread_yield();
   }
@@ -409,7 +410,7 @@ void
 thread_set_priority (int new_priority) 
 {
   thread_current ()->priority = new_priority;
-  list_sort(&ready_list, cmp_priority, NULL);
+  //list_sort(&ready_list, cmp_priority, NULL);
   test_max_priority();
 }
 
@@ -716,7 +717,7 @@ void test_max_priority (void)
 	struct list_elem *e;
 
 	// If ready_list is empty, it doesn't work.
-	if ( list_empty(&ready_list) )	return;
+	if ( list_empty(&ready_list))	return;
 	
 	e = list_begin(&ready_list);
 	struct thread *t = list_entry(e, struct thread, elem);
@@ -728,6 +729,7 @@ void test_max_priority (void)
 
 bool cmp_priority(const struct list_elem* a_, const struct list_elem* b_, void* aux UNUSED)
 {
+	//printf("cmp_prio\n");
 	int a_priority = (list_entry(a_, struct thread, elem))->priority;
 	int b_priority = (list_entry(b_, struct thread, elem))->priority;
 	return a_priority > b_priority;
