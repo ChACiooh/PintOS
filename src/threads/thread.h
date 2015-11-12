@@ -103,6 +103,12 @@ struct thread
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
 		
+		int init_priority;				/* initial priority to recover */
+		struct lock *wait_on_lock;		/* indicate what lock it waits for. */
+		struct list donations;			/* to consider multiple donation. */
+		struct list_elem donation_elem;	/* to consider multiple donation. */
+
+		/* thread status */
 		int load_status;
 		bool is_exit;
 		int exit_status;
@@ -146,6 +152,11 @@ void thread_yield (void);
 /* Performs some operation on thread t, given auxiliary data AUX. */
 typedef void thread_action_func (struct thread *t, void *aux);
 void thread_foreach (thread_action_func *, void *);
+
+/* functions for donation. */
+void donate_priority(void);
+void remove_with_lock(struct lock *lock);
+void refresh_priority(void);
 
 int thread_get_priority (void);
 void thread_set_priority (int);

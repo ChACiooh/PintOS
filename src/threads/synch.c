@@ -72,6 +72,7 @@ bool cmp_sem_priority (const struct list_elem *a,
 
 	return ta->priority > tb->priority;
 }
+
 /* Down or "P" operation on a semaphore.  Waits for SEMA's value
    to become positive and then atomically decrements it.
 
@@ -225,9 +226,26 @@ lock_acquire (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
+  struct thread *cur = thread_current();
 
+  if(lock->holder)
+  {
+	  cur->wait_on_lock = lock;	// save the addr of 'lock' to wait into 'cur.'
+	  /* 'lock->holder->donations' means threads which the list of given
+	   * donations from. */
+	  list_insert_ordered(&lock->holder->donations, &cur->donation_elem, cmp_priority, NULL);
+	  /* priority donation */
+	  donate_priority();
+  }
+
+  /* NOTICE 
+   * if there is no context-switching, then I may use
+   * thread_current(). */
   sema_down (&lock->semaphore);
-  lock->holder = thread_current ();
+  //thread_current()->wait_on_lock = NULL;
+  cur->wait_on_lock = NULL;
+  //lock->holder = thread_current ();
+  lock->holder = cur;
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -262,6 +280,10 @@ lock_release (struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
 
   lock->holder = NULL;
+
+  //printf("check\n");
+  remove_with_lock(lock);
+  refresh_priority();
   sema_up (&lock->semaphore);
 }
 
