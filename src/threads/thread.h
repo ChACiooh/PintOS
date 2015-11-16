@@ -108,6 +108,11 @@ struct thread
 		struct list donations;			/* to consider multiple donation. */
 		struct list_elem donation_elem;	/* to consider multiple donation. */
 
+
+		/* for mlfqs */
+		int nice;
+		int recent_cpu;
+
 		/* thread status */
 		int load_status;
 		bool is_exit;
@@ -165,6 +170,17 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+/* functions for mlfqs. */
+int thread_get_nice (void);
+void thread_set_nice (int);
+int thread_get_recent_cpu (void);
+int thread_get_load_avg (void);
+void mlfqs_priority (struct thread*);
+void mlfqs_recent_cpu (struct thread*);
+void mlfqs_load_avg (void);
+void mlfqs_increment (void);
+void mlfqs_recalc (void);
 
 /* Alarm clock functions. */
 void thread_sleep(int64_t ticks);	/* Make current thread which is running sleep. */

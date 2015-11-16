@@ -176,6 +176,20 @@ timer_interrupt (struct intr_frame *args UNUSED)
   ticks++;
   thread_tick ();
 
+  if(thread_mlfqs)
+  {
+	  mlfqs_increment();	// add 1 to recent cpu
+	  if(ticks % TIMER_FREQ == 0)	// every 1 sec
+	  {
+		  mlfqs_load_avg();	// recalculate load average.
+		  mlfqs_recalc();	// recalculate recent cpu and priority.
+	  }
+	  if(ticks % 4 == 0)	// every 4 ticks
+	  {
+		  mlfqs_priority(thread_current());
+	  }
+  }
+
   /* If now tick equals or is over than min tick,
    * then awake the thread.
    */

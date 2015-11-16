@@ -226,9 +226,10 @@ lock_acquire (struct lock *lock)
   ASSERT (lock != NULL);
   ASSERT (!intr_context ());
   ASSERT (!lock_held_by_current_thread (lock));
+  //enum intr_level old_level = intr_disable ();
   struct thread *cur = thread_current();
 
-  if(lock->holder)
+  if(!thread_mlfqs && lock->holder)	// disable where mlfqs is activated.
   {
 	  cur->wait_on_lock = lock;	// save the addr of 'lock' to wait into 'cur.'
 	  /* 'lock->holder->donations' means threads which the list of given
@@ -242,10 +243,9 @@ lock_acquire (struct lock *lock)
    * if there is no context-switching, then I may use
    * thread_current(). */
   sema_down (&lock->semaphore);
-  //thread_current()->wait_on_lock = NULL;
-  cur->wait_on_lock = NULL;
-  //lock->holder = thread_current ();
   lock->holder = cur;
+  cur->wait_on_lock = NULL;
+  //intr_set_level(old_level);
 }
 
 /* Tries to acquires LOCK and returns true if successful or false
@@ -280,10 +280,11 @@ lock_release (struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
 
   lock->holder = NULL;
-
-  //printf("check\n");
-  remove_with_lock(lock);
-  refresh_priority();
+  if(!thread_mlfqs)	// remove with lock only if it is not in mlfq.
+  {
+	  remove_with_lock(lock);
+	  refresh_priority();
+  }
   sema_up (&lock->semaphore);
 }
 
@@ -364,6 +365,7 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED)
 
   if (!list_empty (&cond->waiters)) 
   {
+	  // sorting by priority of semaphore, and sema up.
 	  list_sort (&cond->waiters, cmp_sem_priority, NULL);
 	  sema_up (&list_entry (list_pop_front (&cond->waiters),
                           struct semaphore_elem, elem)->semaphore);
