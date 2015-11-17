@@ -393,7 +393,7 @@ thread_foreach (thread_action_func *func, void *aux)
 }
 
 /* Set the current thread's priority to NEW_PRIORITY. 
- * And need to consider donation. */
+ * And need to consider donation and if it is mlfq. */
 void
 thread_set_priority (int new_priority) 
 {
