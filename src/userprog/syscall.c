@@ -20,7 +20,7 @@ void get_argument (int** esp, int* arg, int count);
 
 /* System call function */
 void sys_halt (void);
-void sys_exit (int status);
+//void sys_exit (int status);
 bool sys_create (const char *file, unsigned initial_size);
 bool sys_remove (const char *file);
 tid_t sys_exec (const char *cmd_line);
@@ -141,12 +141,12 @@ syscall_handler (struct intr_frame *f UNUSED)
     case SYS_READ:
       get_argument(&esp, arg, 3);
       //check_address((void*)arg[1]);
-	  check_valid_buffer((void*)arg[1], (size_t)arg[2], &esp, true);
-      f->eax = sys_read(arg[0],(char*)arg[1],(size_t)arg[2]);
+	  check_valid_buffer((void*)arg[1], (size_t)arg[2], (void*)esp, true);
+      f->eax = sys_read(arg[0],(void*)arg[1],(size_t)arg[2]);
       break;
     case SYS_WRITE:
       get_argument(&esp, arg, 3);
-	  check_valid_buffer((void*)arg[1], (size_t)arg[2], &esp, false);
+	  check_valid_buffer((void*)arg[1], (size_t)arg[2], (void*)esp, false);
       f->eax = sys_write(arg[0],(const void*)arg[1],(size_t)arg[2]); 
       break;
     case SYS_SEEK:

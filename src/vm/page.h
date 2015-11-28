@@ -1,8 +1,8 @@
 #ifndef PAGE_H
 #define PAGE_H
+#pragma once
 
 #include <hash.h>
-#pragma once
 
 #define VM_BIN		0
 #define VM_FILE		1

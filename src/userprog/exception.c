@@ -1,4 +1,5 @@
 #include "userprog/exception.h"
+#include "userprog/syscall.h"
 #include <inttypes.h>
 #include <stdio.h>
 #include "userprog/gdt.h"
@@ -168,7 +169,7 @@ page_fault (struct intr_frame *f)
   struct vm_entry *ve = find_vme(fault_addr);
   if(!ve)
   {
-	  printf("no vme : %p\n", fault_addr);
+	  // printf("no vme : %p\n", fault_addr);
 	  sys_exit(-1);	// real dead.
   }
   else
@@ -179,7 +180,7 @@ page_fault (struct intr_frame *f)
 	  bool success = handle_mm_fault(ve);
 	  if(!success)
 	  {
-	  	printf("handle failed : %p\n", fault_addr);
+	  	  // printf("handle failed : %p\n", fault_addr);
 		  sys_exit(-1);	// real dead.
 	  }
   }

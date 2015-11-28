@@ -13,12 +13,13 @@
 #include "filesys/filesys.h"
 #include "threads/flags.h"
 #include "threads/init.h"
+#include "threads/malloc.h"
 #include "threads/interrupt.h"
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "vm/page.h"
-//
+
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 
@@ -482,7 +483,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
  done:
   /* We arrive here whether the load is successful or not. */
-  file_close (file);
+  //file_close (file);
   return success;
 }
 
@@ -574,7 +575,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 	  ve->writable = writable;
 	  ve->vaddr = upage;		// page address
 	  ve->is_loaded = false;	// not loaded yet.
-	  ve->type = VM_BIN;
+	  ve->type = VM_BIN;		// so it is binary file now.
 
 	  bool success = insert_vme(&thread_current()->vm, ve);
 	  if(!success)
@@ -638,8 +639,7 @@ setup_stack (void **esp)
   ve->is_loaded = true;			// what it is on stack means loaded.
   ve->writable = true;			// now enabled.
   ve->type = VM_ANON;			// on memory process.
-  bool success2 = insert_vme(&thread_current()->vm, ve);
-  if(!success2)
+  if( !insert_vme(&thread_current()->vm, ve) )
   {
 	  /* exception dealing. */
 	  free(ve);
