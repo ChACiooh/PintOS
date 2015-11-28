@@ -4,6 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
+#include <hash.h>
 
 #include "synch.h"
 
@@ -102,18 +103,9 @@ struct thread
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
+
+	struct hash vm;						/* manage virtual space of thread */
 		
-		int init_priority;				/* initial priority to recover */
-		struct lock *wait_on_lock;		/* indicate what lock it waits for. */
-		struct list donations;			/* to consider multiple donation. */
-		struct list_elem donation_elem;	/* to consider multiple donation. */
-
-
-		/* for mlfqs */
-		int nice;
-		int recent_cpu;
-
-		/* thread status */
 		int load_status;
 		bool is_exit;
 		int exit_status;
@@ -127,7 +119,6 @@ struct thread
 
 		struct file** file_descriptor;
 		int max_fd;
-		int wakeup_tick;
   };
 
 /* If false (default), use round-robin scheduler.
@@ -158,11 +149,6 @@ void thread_yield (void);
 typedef void thread_action_func (struct thread *t, void *aux);
 void thread_foreach (thread_action_func *, void *);
 
-/* functions for donation. */
-void donate_priority(void);
-void remove_with_lock(struct lock *lock);
-void refresh_priority(void);
-
 int thread_get_priority (void);
 void thread_set_priority (int);
 
@@ -170,27 +156,5 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
-
-/* functions for mlfqs. */
-int thread_get_nice (void);
-void thread_set_nice (int);
-int thread_get_recent_cpu (void);
-int thread_get_load_avg (void);
-void mlfqs_priority (struct thread*);
-void mlfqs_recent_cpu (struct thread*);
-void mlfqs_load_avg (void);
-void mlfqs_increment (void);
-void mlfqs_recalc (void);
-
-/* Alarm clock functions. */
-void thread_sleep(int64_t ticks);	/* Make current thread which is running sleep. */
-void thread_awake(int64_t ticks);	/* Awake thread to wake up in sleep_list. */
-void update_next_tick_to_awake(int64_t ticks);	/* Save thread that has minimum tick value. */
-int64_t get_next_tick_to_awake(void);	/* Return 'next_tick_to_awake' in 'thread.c.' */
-void test_max_priority(void);	/* Compare current thread's priority and another thread that has the biggest priority, and schedule. */
-
-/* Return 1 if first priority is bigger than second's. */
-bool cmp_priority(const struct list_elem *a_, const struct list_elem *b_, void *aux UNUSED);	/* Compare the priorities of given threads. */
-
 
 #endif /* threads/thread.h */

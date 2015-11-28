@@ -1,5 +1,6 @@
 #include "userprog/syscall.h"
 #include <stdio.h>
+#include <string.h>
 #include <syscall-nr.h>
 #include <devices/shutdown.h>
 #include <filesys/filesys.h>
@@ -9,10 +10,12 @@
 #include "threads/synch.h"
 #include "threads/interrupt.h"
 #include "threads/thread.h"
+#include "vm/page.h"
 
 static void syscall_handler (struct intr_frame *);
-
-void check_address (void* adrr);
+struct vm_entry* check_address (void* adrr, void *esp UNUSED);
+void check_valid_buffer(void*, unsigned, void*, bool);
+void check_valid_string(const void *str, void *esp);
 void get_argument (int** esp, int* arg, int count);
 
 /* System call function */
@@ -38,15 +41,42 @@ syscall_init (void)
 }
 
  /* Check effectiveness of address */
-void
-check_address (void *addr)
+struct vm_entry*
+check_address (void *addr, void *esp UNUSED)
 {
   if((unsigned int)addr <= 0x08048000 || (unsigned int)addr >= 0xc0000000)
   {
     sys_exit(-1);
   }
+  struct vm_entry *ve = find_vme(addr);
+  return ve;	// if there is no vm entry, return NULL.
 }
 
+void check_valid_buffer(void *buffer, unsigned size, void *esp, bool to_write)
+{
+	struct vm_entry *ve;
+	unsigned i;
+	for(i = 0; i < size; ++i)
+	{
+		ve = check_address((char*)buffer + i, esp);	// unit of byte.
+		if(!ve)
+		{
+			// error.
+			sys_exit(-1);
+		}
+
+		if(to_write && !ve->writable)
+		{
+			// logical error.
+			sys_exit(-1);
+		}
+	}
+}
+
+void check_valid_string(const void *str, void *esp)
+{
+	check_valid_buffer(str, strlen(str)+1, esp, false);	// reuse | wrap
+}
  /* Get argument from esp function */
 void
 get_argument (int **esp, int *arg, int count)
@@ -55,7 +85,7 @@ get_argument (int **esp, int *arg, int count)
   for(; i < count; i++)
   {
     (*esp)++;
-    check_address(*esp);
+    check_address(*esp, *esp);
     arg[i] = **esp;
   }    
 }
@@ -66,7 +96,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   int* esp = (int*)(f->esp);
   int system_call_number = *esp;
   int arg[3];	//argument 
-  check_address((void*)esp);
+  check_address((void*)esp, (void*)esp);
    /* System call */
   switch(system_call_number)
   {
@@ -79,8 +109,9 @@ syscall_handler (struct intr_frame *f UNUSED)
       sys_exit(arg[0]);
       break;
     case SYS_EXEC:
+	  /* need to check string. */
       get_argument(&esp, arg, 1);
-      check_address((void*)arg[0]);
+      check_valid_string((const void*)arg[0], (void*)esp);
       f->eax = sys_exec((const char *)arg[0]);
       break;
     case SYS_WAIT:
@@ -90,18 +121,18 @@ syscall_handler (struct intr_frame *f UNUSED)
     /* About FILE Descriptor */
     case SYS_CREATE:
       get_argument(&esp, arg, 2);
-      check_address((void*)arg[0]);
+      check_address((void*)arg[0], (void*)esp);
       f->eax = sys_create((const char*)arg[0], arg[1]);
       break;
     case SYS_REMOVE:
       get_argument(&esp, arg, 1);
-      check_address((void*)arg[0]);
+      check_address((void*)arg[0], (void*)esp);
       f->eax = sys_remove((const char*)arg[0]);
       break;
     case SYS_OPEN:
       get_argument(&esp, arg, 1);
-      check_address((void*)arg[0]);
-      f->eax = sys_open((char*)arg[0]);
+      check_valid_string((const void*)arg[0], (void*)esp);
+      f->eax = sys_open((const char*)arg[0]);
       break;
     case SYS_FILESIZE:
       get_argument(&esp, arg, 1);
@@ -109,13 +140,14 @@ syscall_handler (struct intr_frame *f UNUSED)
       break;
     case SYS_READ:
       get_argument(&esp, arg, 3);
-      check_address((void*)arg[1]);
-      f->eax = sys_read(arg[0],(char*)arg[1],arg[2]);
+      //check_address((void*)arg[1]);
+	  check_valid_buffer((void*)arg[1], (size_t)arg[2], &esp, true);
+      f->eax = sys_read(arg[0],(char*)arg[1],(size_t)arg[2]);
       break;
     case SYS_WRITE:
       get_argument(&esp, arg, 3);
-      check_address((void*)arg[1]);
-      f->eax = sys_write(arg[0],(void*)arg[1],arg[2]); 
+	  check_valid_buffer((void*)arg[1], (size_t)arg[2], &esp, false);
+      f->eax = sys_write(arg[0],(const void*)arg[1],(size_t)arg[2]); 
       break;
     case SYS_SEEK:
       get_argument(&esp, arg, 2);
